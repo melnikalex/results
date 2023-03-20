@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"text/tabwriter"
+  "path/filepath"
+  "io/ioutil"
 	"time"
 
 	pb "github.com/tektoncd/results/proto/v1alpha2/results_go_proto"
@@ -28,13 +30,21 @@ func PrintProto(w io.Writer, m proto.Message, format string) error {
 				}, "\t"))
 			}
 		case *pb.ListRecordsResponse:
-			fmt.Fprintln(tw, strings.Join([]string{"Name", "Type", "Start", "Update"}, "\t"))
+			fmt.Fprintln(tw, strings.Join([]string{"Name", "Type", "Start", "Update", "Value"}, "\t"))
 			for _, r := range t.GetRecords() {
+        recordID := filepath.Base(r.GetName())
+        tmpfile, err := ioutil.TempFile("", recordID)
+        if err != nil {
+          return err
+        }
+        tmpfile.Write(r.Data.GetValue())
+
 				fmt.Fprintln(tw, strings.Join([]string{
 					r.GetName(),
 					r.GetData().GetType(),
 					r.GetCreatedTime().AsTime().Truncate(time.Second).Local().String(),
 					r.GetUpdatedTime().AsTime().Truncate(time.Second).Local().String(),
+          tmpfile.Name(),
 				}, "\t"))
 			}
 		}
